@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 from .compilation import Compilation
+from .errors import Errors
 from .qirtarget import QirTarget
 from .qsbackend import QsBackend
 from .qs_simulator import QSharpSimulator

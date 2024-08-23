@@ -5,16 +5,15 @@ from abc import ABC, abstractmethod
 import datetime
 import logging
 import time
-from typing import Dict, Any, List, Optional, Tuple, Union
+from typing import Dict, Any, List, Optional, Union
 from warnings import warn
 
 from qiskit import transpile
-from qiskit.qobj import QobjHeader
 from qiskit.circuit import (
     QuantumCircuit,
 )
 
-from qiskit.qasm3.exporter import Exporter, GlobalNamespace
+from qiskit.qasm3.exporter import Exporter
 from qiskit.providers import BackendV2, Options
 from qiskit.result import Result
 from qiskit.transpiler import PassManager
@@ -22,12 +21,50 @@ from qiskit.transpiler.passes import RemoveBarriers, RemoveResetInZeroState
 from qiskit.transpiler.target import Target
 
 from .compilation import Compilation
+from .errors import Errors
 from .qirtarget import QirTarget
 from ..jobs import QsJob
 from ..passes import RemoveDelays
-
+from .... import TargetProfile
 
 logger = logging.getLogger(__name__)
+
+_QISKIT_STDGATES = [
+    "p",
+    "x",
+    "y",
+    "z",
+    "h",
+    "s",
+    "sdg",
+    "t",
+    "tdg",
+    "sx",
+    "rx",
+    "ry",
+    "rz",
+    "cx",
+    "cy",
+    "cz",
+    "cp",
+    "crx",
+    "cry",
+    "crz",
+    "ch",
+    "swap",
+    "ccx",
+    "cswap",
+    "cu",
+    "CX",
+    "phase",
+    "cphase",
+    "id",
+    "u1",
+    "u2",
+    "u3",
+    "U",
+    "reset",
+]
 
 
 def filter_kwargs(func, **kwargs) -> Dict[str, Any]:
@@ -43,8 +80,6 @@ def filter_kwargs(func, **kwargs) -> Dict[str, Any]:
 
 def get_transpile_options(**kwargs) -> Dict[str, Any]:
     args = filter_kwargs(transpile, **kwargs)
-    if "optimization_level" not in args:
-        args["optimization_level"] = 0
     return args
 
 
@@ -141,7 +176,7 @@ class QsBackend(BackendV2, ABC):
 
             target_gates = set(self.target.operation_names)
             target_gates -= set(non_gate_instructions)
-            qiskit_gates = set(GlobalNamespace.qiskit_gates.keys())
+            qiskit_gates = set(_QISKIT_STDGATES)
             basis_gates = list(target_gates - qiskit_gates)
 
         # selt the default options for the exporter
@@ -234,7 +269,7 @@ class QsBackend(BackendV2, ABC):
                 logger.error("Output: %s", output)
             from .... import QSharpError
 
-            raise QSharpError("Run terminated without valid output.")
+            raise QSharpError(str(Errors.RUN_TERMINATED_WITHOUT_OUTPUT))
 
         output["job_id"] = job_id
         output["date"] = str(datetime.datetime.now().isoformat())
@@ -247,7 +282,7 @@ class QsBackend(BackendV2, ABC):
             "qiskit_pass_options": str(self._build_qiskit_pass_options(**options)),
             "transpile_options": str(self._build_transpile_options(**options)),
         }
-        output["header"] = QobjHeader().to_dict()
+        output["header"] = {}
         return self._create_results(output)
 
     @abstractmethod
@@ -283,9 +318,10 @@ class QsBackend(BackendV2, ABC):
         orig = self.target.num_qubits
         try:
             self.target.num_qubits = circuit.num_qubits
-            transpile_options = get_transpile_options(**options)
+            transpile_options = self._build_transpile_options(**options)
             backend = transpile_options.pop("backend", self)
             target = transpile_options.pop("target", self.target)
+            # in 1.3 add qubits_initially_zero=True to the transpile call
             transpiled_circuit = transpile(
                 circuit, backend=backend, target=target, **transpile_options
             )
@@ -386,7 +422,7 @@ class QsBackend(BackendV2, ABC):
         except Exception as ex:
             from .. import QiskitError
 
-            raise QiskitError("Failed to export QASM3 source.") from ex
+            raise QiskitError(str(Errors.FAILED_TO_EXPORT_QASM)) from ex
 
     def qsharp(self, circuit: QuantumCircuit, **kwargs) -> str:
         """
@@ -445,6 +481,8 @@ class QsBackend(BackendV2, ABC):
         """
         name = kwargs.pop("name", circuit.name)
         target_profile = kwargs.pop("target_profile", self.options.target_profile)
+        if target_profile == TargetProfile.Unrestricted:
+            raise ValueError(str(Errors.UNRESTRICTED_INVALID_QIR_TARGET))
 
         qasm3_source = self.qasm3(circuit, **kwargs)
 

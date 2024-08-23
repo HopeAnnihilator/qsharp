@@ -56,7 +56,7 @@ def test_estimate_qiskit_rgqft_multiplier() -> None:
     circuit = RGQFTMultiplier(num_state_qubits=bitwidth)
     params = EstimatorParams()
     sim = ReSimulator()
-    job = sim.run(circuit, params=params)
+    job = sim.run(circuit, params=params, optimization_level=0)
     res = job.result()
     assert res["status"] == "success"
     assert res.logical_counts == LogicalCounts(
@@ -78,7 +78,7 @@ def test_estimate_qiskit_rgqft_multiplier_in_threadpool() -> None:
     circuit = RGQFTMultiplier(num_state_qubits=bitwidth)
     params = EstimatorParams()
     executor = ThreadPoolExecutor(max_workers=1)
-    sim = ReSimulator(executor=executor)
+    sim = ReSimulator(executor=executor, transpile_options={"optimization_level": 0})
     job = sim.run(circuit, params=params)
     res = job.result()
     assert res["status"] == "success"

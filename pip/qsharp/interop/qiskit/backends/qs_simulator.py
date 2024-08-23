@@ -15,6 +15,7 @@ from ..execution import DetaultExecutor
 from ..jobs import QsSimJob, QsJobSet
 from .qsbackend import QsBackend
 from .compilation import Compilation
+from .errors import Errors
 
 logger = logging.getLogger(__name__)
 
@@ -123,15 +124,15 @@ class QSharpSimulator(QsBackend):
         :raises QSharpError: If there is an error evaluating the source code.
         :raises QasmError: If there is an error compiling the source code.
         :raises QiskitError: If there is an error generating or parsing QASM.
-        :raises AssertionError: If the run_input is not a QuantumCircuit.
+        :raises ValueError: If the run_input is not a QuantumCircuit
+            or List[QuantumCircuit].
         """
 
         if not isinstance(run_input, list):
             run_input = [run_input]
         for circuit in run_input:
-            assert isinstance(
-                circuit, QuantumCircuit
-            ), "The run_input must be a QuantumCircuit."
+            if not isinstance(circuit, QuantumCircuit):
+                raise ValueError(str(Errors.INPUT_MUST_BE_QC))
 
         return self._run(run_input, **options)
 
@@ -147,7 +148,7 @@ class QSharpSimulator(QsBackend):
 
         shots = input_params.get("shots")
         if shots is None:
-            raise ValueError("The number of shots must be specified.")
+            raise ValueError(str(Errors.MISSING_NUMBER_OF_SHOTS))
 
         for program, exec_result in exec_results:
             results = [_to_qiskit_bitstring(result) for result in exec_result]

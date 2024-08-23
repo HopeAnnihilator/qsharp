@@ -161,7 +161,7 @@ def test_gate_crz_transpiles() -> None:
 
 @pytest.mark.skipif(not QISKIT_AVAILABLE, reason=SKIP_REASON)
 def test_gate_id_transpiles() -> None:
-    run_transpile_test(lambda circuit: circuit.id(1), "id q[1];")
+    run_transpile_test(lambda circuit: circuit.id(1), "id q[1];", optimization_level=0)
 
 
 @pytest.mark.skipif(not QISKIT_AVAILABLE, reason=SKIP_REASON)

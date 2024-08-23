@@ -4,7 +4,7 @@
 from concurrent.futures import Executor
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
 from qiskit import QuantumCircuit
@@ -12,6 +12,7 @@ from qiskit.providers import Options
 from qiskit.transpiler.target import Target
 
 from .compilation import Compilation
+from .errors import Errors
 from .qsbackend import QsBackend
 from ..jobs import ReJob
 from ..execution import DetaultExecutor
@@ -112,12 +113,12 @@ class ReSimulator(QsBackend):
         :raises QSharpError: If there is an error evaluating the source code.
         :raises QasmError: If there is an error compiling the source code.
         :raises QiskitError: If there is an error generating or parsing QASM.
-        :raises AssertionError: If the run_input is not a QuantumCircuit.
+        :raises ValueError: If the run_input is not a QuantumCircuit.
         """
         if isinstance(run_input, QuantumCircuit):
             run_input = [run_input]
         if len(run_input) != 1:
-            raise ValueError("Only one QuantumCircuit can be run at a time.")
+            raise ValueError(str(Errors.ONLY_ONE_CIRCUIT_ALLOWED))
 
         if params is not None:
             options["params"] = params
