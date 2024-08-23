@@ -483,7 +483,7 @@ if build_pip and build_widgets and args.integration_tests:
         "ipykernel",
         "nbconvert",
         "pandas",
-        "qiskit>=1.1.1,<2.0",
+        "qiskit==1.1.1",
     ]
     subprocess.run(pip_install_args, check=True, text=True, cwd=root_dir, env=pip_env)
 
@@ -522,9 +522,8 @@ if build_pip and build_widgets and args.integration_tests:
         dir for dir in os.walk(samples_src) if "qsharp.json" in dir[2]
     ]
 
-    test_projects_directories = [ dir
-        for dir, _, _ in project_directories
-        if dir.find("testing") != -1
+    test_projects_directories = [
+        dir for dir, _, _ in project_directories if dir.find("testing") != -1
     ]
 
     for test_project_dir in test_projects_directories:
